@@ -31,7 +31,14 @@
 
         <section>
             <h3>The Problem</h3>
-            <p>For &ldquo;A Search For a Shiny Thing&rdquo; we endeavored to create a tiny but dense world full of things to explore. The game places a large emphasis on narrative, exploration and puzzle solving. The game features many colorful characters the protagonist meets along the way. Discovering the people on the island was just as important as discovering locations. It's a coming of age story about ... We wanted the NPCs to have real conversations rather than single repeating lines of dialogue.</p>
+            <p>For &ldquo;A Search For a Shiny Thing&rdquo; we endeavored to create a tiny but dense world full of things to explore. The game places a large emphasis on narrative, exploration and puzzle solving. The game features many colorful characters the protagonist meets along the way. Discovering the people on the island was just as important as discovering locations. It wasn't enough for NPCs to simply parrot a few lines of dialogue, we wanted branching conversations with choices that may or may not be available depending on what quests the player has completed and whether they discovered something in the world.  Out of the box Unity doesn't have a dialogue system. There are tools that can be bought on the asset store, but we wanted to make our custom tools both as a learning experience and for control.</p>
+        </section>
+
+        <section>
+            <h3>Authoring</h3>
+            <p>The dialogues are authored in a simple spreadsheet. The dialogues are laid out line by line in a spreadsheet. All lines must have a key, lines with the same key are grouped together into one dialogue. The line can optionally have an actor, topic and text. The key and actor fields are invisible to the player and only serve to identify the dialogue and optionally who is speaking it, while topic and text are language specific. Weirdly enough, a line with no actor, topic and text is still technically valid, though we expect a line to have at least a topic or text. That is because lines can be used in multiple different contexts. We use the same system for interacting with obejcts as we do for speaking with NPCs. For example, for grabbing a hammer from a toolbox we have a line with a key "TOOL_BOX_HAMMER" and it contains only a topic. We display the topic selection box to the player when they interact with the toolbox, and it has the option "Grab the hammer" (localized to whatever language the player is playing in).</p>
+            <p>The spreadsheet is exported as a .tsv file. It could've been .csv but .tsv was slightly easier to parse considering there are plenty of commas in the text. Currently, we don't validate the spreadsheet, but ideally we need to ensure that it contains no tabs before being exported.  imported directly in Unity.</p>
+            <p>If I were building this now, I would read the contents of the table directly from the web</p>
         </section>
 
         <section>
@@ -42,6 +49,11 @@
         <section>
             <h3>Actions and Conditions</h3>
             <p>Text</p>
+        </section>
+        <section>
+            <h3>Text Box</h3>
+            <p>Last but not least, how is the text displayed to the player? Instead of going for visual novel style text boxes, we went with "thought clouds" that appear above NPCs. But how do we position the thought clouds? We planned for some NPCs to move freely in the world and that meant manually setting up dialogue cameras was not an option. That meant we needed either to implment a smart camera system that would check for any visual obstructions, or we could keep the current gameplay camera and simply make sure the text boxes are positioned correctly. We went with the latter option. We took inspiration from A Short Hike. The thought clouds appear above the speaking NPCs without obstructing neither the speaker nor the player. The text box's desired position is to always be directly above the speaker. I apply a correction on the x-axis if the current desired position leads to an overlap with the non-speaker actor. I clamp the position of the box to never go outsite the screen. This simple setup supports dialogues with 2 actors, but considering that I'm working with AABBs it wouldn't be too difficult to implement solver that can handle several actors.</p>
+            <p>Topic selection will appear at the bottom whenever the dialogue graph hits a choice node. Choices that don't meet conditions will either not appear or will appear as questions marks if we want to hint the NPC has an undiscovered topic.</p>
         </section>
     </div>
 </div>
