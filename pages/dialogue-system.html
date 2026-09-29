@@ -25,7 +25,7 @@
         <section>
             <h3>Introduction</h3>
             <div>
-                <p>In 2024, I co-founded a tiny indie studio called The Notlanders and for the next two years I worked on a photography adventure game titled &ldquo;A Search for a Shiny Thing&rdquo;. Although the project is currently on indefinite hiatus, it's development presented many interesting challenges which required creative solutions. In this article, I will walk you through the dialogue system I developed for the game.</p>
+                <p>In 2024, I co-founded a tiny indie studio called The Notlanders and for the next two years I worked on a photography adventure game titled &ldquo;A Search for a Shiny Thing&rdquo;. Although the project is currently on indefinite hiatus, it's development presented many interesting challenges which required creative solutions. In this article, I will walk you through the dialogue system I developed for the game and talk about the things that worked and the things that didn't.</p>
             </div>
         </section>
 
@@ -35,15 +35,31 @@
         </section>
 
         <section>
-            <h3>Authoring</h3>
-            <p>The dialogues are authored in a simple spreadsheet. The dialogues are laid out line by line in a spreadsheet. All lines must have a key, lines with the same key are grouped together into one dialogue. The line can optionally have an actor, topic and text. The key and actor fields are invisible to the player and only serve to identify the dialogue and optionally who is speaking it, while topic and text are language specific. Weirdly enough, a line with no actor, topic and text is still technically valid, though we expect a line to have at least a topic or text. That is because lines can be used in multiple different contexts. We use the same system for interacting with obejcts as we do for speaking with NPCs. For example, for grabbing a hammer from a toolbox we have a line with a key "TOOL_BOX_HAMMER" and it contains only a topic. We display the topic selection box to the player when they interact with the toolbox, and it has the option "Grab the hammer" (localized to whatever language the player is playing in).</p>
-            <p>The spreadsheet is exported as a .tsv file. It could've been .csv but .tsv was slightly easier to parse considering there are plenty of commas in the text. Currently, we don't validate the spreadsheet, but ideally we need to ensure that it contains no tabs before being exported.  imported directly in Unity.</p>
-            <p>If I were building this now, I would read the contents of the table directly from the web</p>
+            <h3>Authoring and Import</h3>
+            <p>The dialogues are authored in a simple spreadsheet. The dialogues are laid out line by line in a spreadsheet. All lines must have a key, lines with the same key are grouped together into one dialogue. The line can optionally have an actor, topic and text. The key and actor fields are invisible to the player and only serve to identify the dialogue and optionally who is speaking it, while topic and text are language specific. A line with no actor, topic and text is still technically valid, though we expect a line to have at least a topic or text. That is because lines can be used in multiple different contexts. For example, we use the same system for interacting with objects as we do for speaking with NPCs. For grabbing a hammer from a toolbox we have a line with a key "TOOL_BOX_HAMMER" and it contains only a topic. We display the topic selection box to the player when they interact with the toolbox, and it has the option "Grab the hammer" (localized to whatever language the player is playing in).</p>
+            <p>The spreadsheet is exported as a .tsv file. It could've been .csv but .tsv was slightly easier to parse considering there are plenty of commas in the text. Currently, we don't validate the spreadsheet, but ideally we need to ensure that it contains no tabs before being exported. Then you manually import the spreadsheet into Unity. The project was not built with addressables, so the spreadsheets are placed into the streaming assets folder instead. A custom asset post-processing parses the spreadsheet and creates a scriptable object for each dialogue key. These scriptable objects act as searchable keys when you're setting up a dialogue graph and allow you to preview dialogue and set up inline actions, such as changing the NPCs facial expression. I'll talk about both dialogue graphs and actions later. Each of those scriptable objects keeps a reference to the spreadsheet it's associated with.</p>
+
         </section>
 
         <section>
             <h3>Graph Tool</h3>
-            <p>Text</p>
+            <p>The next step in the process is to create a dialogue graph. To accommodate for conditional / branching dialogues I created a node-based tool, taking a little bit of inspiration from behavior trees and assembly language. The project uses Unity 2022, and it was unfortunately not feasible to update it to Unity 6 because there was a high probability all of our custom rendering stuff would break, perhaps without a possibility of repair, because the scriptable render pipeline API changed. Because of that I was unable to use the graph toolkit that is available in Unity 6. To save time, I decided to use a third-party plugin called xNode which is a framework for developing node-based tools just like the graph toolkit. xNode is no longer maintain and isn't quite meant to be used in the way I'm using it, but it did its job.</p>
+            <p>Here are all the nodes available in the dialogue graph:</p>
+            <ul>
+                <li>Dialogue</li>
+                <li>Action</li>
+                <li>Condition</li>
+                <li>Branch (Flow)</li>
+                <li>Choice (Flow)</li>
+                <li>Selector (Flow)</li>
+                <li>Jump (Flow)</li>
+                <li>Label (Flow)</li>
+                <li>And (Logic)</li>
+                <li>Not (Logic)</li>
+                <li>Or (Logic)</li>
+                <li>Xor (Logic)</li>
+            </ul>
+            <p>The most central node is of course the "Dialogue" node. It has a field for referencing the dialogue scriptable object, a pin for specifying a condition that decides whether the dialogue is valid/able to play and pins connecting to the previous node and the next node. A branch will take either the true or false path based on the evaluated condition. A choice brings up a topic selection menu to the player where the can choose which dialogue option they want to choose. A selector, similar to a behavior tree, will evaluate all of it's "children" nodes from top to bottom and play the first available one. Jump and label allow moving between different parts of the graph and creating cyclical dialogues. And/Not/Or/Xor are logical nodes that allow combining multiple conditions in various ways.</p>
         </section>
 
         <section>
@@ -51,9 +67,14 @@
             <p>Text</p>
         </section>
         <section>
-            <h3>Text Box</h3>
+            <h3>At Runtime / Text Box</h3>
+            <p>When the scene loads and the scriptable object is loaded into memory, it registers itself with the text manager. After the scene is fully loaded, the text manager deserializes all the dialogue from the relevant spreadsheet into the scriptable object taking into account the current language setting. This process happens for all other text in the game as well, so the player can change the language of the game at any time and the game simply has to call this ReloadText function.</p>
             <p>Last but not least, how is the text displayed to the player? Instead of going for visual novel style text boxes, we went with "thought clouds" that appear above NPCs. But how do we position the thought clouds? We planned for some NPCs to move freely in the world and that meant manually setting up dialogue cameras was not an option. That meant we needed either to implment a smart camera system that would check for any visual obstructions, or we could keep the current gameplay camera and simply make sure the text boxes are positioned correctly. We went with the latter option. We took inspiration from A Short Hike. The thought clouds appear above the speaking NPCs without obstructing neither the speaker nor the player. The text box's desired position is to always be directly above the speaker. I apply a correction on the x-axis if the current desired position leads to an overlap with the non-speaker actor. I clamp the position of the box to never go outsite the screen. This simple setup supports dialogues with 2 actors, but considering that I'm working with AABBs it wouldn't be too difficult to implement solver that can handle several actors.</p>
             <p>Topic selection will appear at the bottom whenever the dialogue graph hits a choice node. Choices that don't meet conditions will either not appear or will appear as questions marks if we want to hint the NPC has an undiscovered topic.</p>
+        </section>
+        <section>
+            <h3>Reflection</h3>
+            <p>If I were building this now, I would read the contents of the table directly from the web</p>
         </section>
     </div>
 </div>
