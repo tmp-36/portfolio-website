@@ -43,7 +43,7 @@
 
         <section>
             <h3>Graph Tool</h3>
-            <p>The next step in the process is to create a dialogue graph. To accommodate for conditional / branching dialogues I created a node-based tool, taking a little bit of inspiration from behavior trees and assembly language. The project uses Unity 2022, and it was unfortunately not feasible to update it to Unity 6 because there was a high probability all of our custom rendering stuff would break, perhaps without a possibility of repair, because the scriptable render pipeline API changed. Because of that I was unable to use the graph toolkit that is available in Unity 6. To save time, I decided to use a third-party plugin called xNode which is a framework for developing node-based tools just like the graph toolkit. xNode is no longer maintain and isn't quite meant to be used in the way I'm using it, but it did its job.</p>
+            <p>The next step in the process is to create a dialogue graph. To accommodate for conditional / branching dialogues I created a node-based tool, taking a little bit of inspiration from behavior trees and assembly language. The project uses Unity 2022, and it was unfortunately not feasible to update it to Unity 6 because there was a high probability all of our custom rendering stuff would break, perhaps without a possibility of repair, because the scriptable render pipeline API changed. Because of that I was unable to use the graph toolkit that is available in Unity 6. To save time, I decided to use a third-party plugin called xNode which is a framework for developing node-based tools just like the graph toolkit. xNode is no longer maintained and isn't quite meant to be used in the way I'm using it, but it did its job.</p>
             <p>Here are all the nodes available in the dialogue graph:</p>
             <ul>
                 <li>Dialogue</li>
@@ -64,7 +64,41 @@
 
         <section>
             <h3>Actions and Conditions</h3>
-            <p>Text</p>
+            <p>Conditions evaluate the current game state and return true when the requirements are satisfied, or false otherwise. The base Condition class defines the common interface and individual condition types then implement their own logic. For example, an inventory item condition checks whether a character (usually player) has a specific item in their inventory. You specify what character's inventory to check by referencing an ID scriptable object, the item scriptable object and optionally quantity.</p>
+            <details>
+                <summary>Click to view: Condition (base class)</summary>
+                <pre class="code-block"><code><span class="attribute">[Serializable]</span>
+<span class="keyword">public</span> <span class="keyword">abstract</span> <span class="keyword">class</span> <span class="type">Condition</span>
+{
+    <span class="keyword">public</span> <span class="keyword">abstract</span> <span class="type">bool</span> <span class="function">Check</span>();
+}</code></pre>
+            </details>
+            <details>
+                <summary>Click to view: Inventory Item Condition</summary>
+
+                <pre class="code-block"><code><span class="attribute">[AddTypeMenu</span><span class="operator">(</span><span class="string">"Item/Inventory Item"</span><span class="operator">)]</span>
+<span class="attribute">[Serializable]</span>
+<span class="keyword">public</span> <span class="keyword">class</span> <span class="type">InventoryItemCondition</span> <span class="operator">:</span> <span class="type">Condition</span>
+{
+    <span class="attribute">[SerializeField]</span> <span class="keyword">private</span> <span class="type">ScriptableID</span> <span class="variable">id</span>;
+    <span class="attribute">[SerializeField]</span> <span class="keyword">private</span> <span class="type">Item</span> <span class="variable">item</span>;
+    <span class="attribute">[SerializeField]</span> <span class="keyword">private</span> <span class="type">int</span> <span class="variable">quantity</span>;
+
+    <span class="keyword">public</span> <span class="keyword">override</span> <span class="type">bool</span> <span class="function">Check</span>()
+    {
+        <span class="keyword">if</span> (<span class="type">Locator</span>.<span class="member">GetByID</span><span class="operator">&lt;</span><span class="type">Inventory</span><span class="operator">&gt;</span>(<span class="variable">id</span>, <span class="keyword">out</span> <span class="keyword">var</span> <span class="variable">inventory</span>))
+        {
+            <span class="type">Debug</span>.<span class="member">Assert</span>(<span class="variable">item</span> <span class="operator">!=</span> <span class="keyword">null</span>);
+            <span class="keyword">return</span> <span class="variable">inventory</span>.<span class="member">HasQuantity</span>(<span class="variable">item</span>, <span class="type">Mathf</span>.<span class="member">Max</span>(<span class="number">1</span>, <span class="variable">quantity</span>));
+        }
+
+        <span class="keyword">return</span> <span class="keyword">false</span>;
+    }
+}</code></pre>
+            </details>
+            <p>In the context of a dialogue graph we use conditions to determine which of the selector's child node should be played, to hide dialogues from the player until they fulfill a requirement and to control whether an action should be triggered.</p>
+            <p>Actions are</p>
+
         </section>
         <section>
             <h3>At Runtime / Text Box</h3>
